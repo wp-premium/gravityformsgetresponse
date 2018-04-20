@@ -1,5 +1,10 @@
 <?php
 
+// don't load directly
+if ( ! defined( 'ABSPATH' ) ) {
+	die();
+}
+
 GFForms::include_feed_addon_framework();
 
 class GFGetResponse extends GFFeedAddOn {
@@ -236,7 +241,7 @@ class GFGetResponse extends GFFeedAddOn {
 		
 		$description  = '<p>';
 		$description .= sprintf(
-			esc_html__( 'GetResponse makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add them to your GetResponse subscriber list. If you don\'t have a GetResponse account, you can %1$s sign up for one here.%2$s', 'gravityformsgetresponse' ),
+			esc_html__( 'GetResponse makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your GetResponse subscriber list. If you don\'t have a GetResponse account, you can %1$s sign up for one here.%2$s', 'gravityformsgetresponse' ),
 			'<a href="http://www.getresponse.com/" target="_blank">', '</a>'
 		);
 		$description .= '</p>';
