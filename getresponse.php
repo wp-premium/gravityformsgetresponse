@@ -1,15 +1,10 @@
 <?php
 
-// don't load directly
-if ( ! defined( 'ABSPATH' ) ) {
-	die();
-}
-	
 /*
 Plugin Name: Gravity Forms GetResponse Add-On
 Plugin URI: https://www.gravityforms.com
 Description: Integrates Gravity Forms with GetResponse, allowing form submissions to be automatically sent to your GetResponse account.
-Version: 1.2
+Version: 1.3
 Author: rocketgenius
 Author URI: https://www.rocketgenius.com
 License: GPL-2.0+
@@ -17,8 +12,7 @@ Text Domain: gravityformsgetresponse
 Domain Path: /languages
 
 ------------------------------------------------------------------------
-Copyright 2009 rocketgenius
-last updated: October 20, 2010
+Copyright 2020 rocketgenius
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,19 +29,47 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-define( 'GF_GETRESPONSE_VERSION', '1.2' );
+defined( 'ABSPATH' ) || die();
 
+define( 'GF_GETRESPONSE_VERSION', '1.3' );
+
+// If Gravity Forms is loaded, bootstrap the GetResponse Add-On.
 add_action( 'gform_loaded', array( 'GF_GetResponse_Bootstrap', 'load' ), 5 );
 
+/**
+ * Class GF_GetResponse_Bootstrap
+ *
+ * Handles the loading of the GetResponse Add-On and registers with the Add-On Framework.
+ */
 class GF_GetResponse_Bootstrap {
 
-	public static function load(){
+	/**
+	 * If the Feed Add-On Framework exists, GetResponse Add-On is loaded.
+	 *
+	 * @access public
+	 * @static
+	 */
+	public static function load() {
+
+		if ( ! method_exists( 'GFForms', 'include_feed_addon_framework' ) ) {
+			return;
+		}
+
 		require_once( 'class-gf-getresponse.php' );
+
 		GFAddOn::register( 'GFGetResponse' );
+
 	}
 
 }
 
+/**
+ * Returns an instance of the GFGetResponse class
+ *
+ * @see    GFGetResponse::get_instance()
+ *
+ * @return GFGetResponse
+ */
 function gf_getresponse() {
 	return GFGetResponse::get_instance();
 }
