@@ -185,6 +185,19 @@ class GFGetResponse extends GFFeedAddOn {
 
 	}
 
+	/**
+	 * Return the plugin's icon for the plugin/form settings menu.
+	 *
+	 * @since 1.3
+	 *
+	 * @return string
+	 */
+	public function get_menu_icon() {
+
+		return file_get_contents( $this->get_base_path() . '/images/menu-icon.svg' );
+
+	}
+
 
 
 
@@ -218,7 +231,7 @@ class GFGetResponse extends GFFeedAddOn {
 								'value' => 'standard',
 							),
 							array(
-								'label' => esc_html__( 'Enterprise', 'gravityformsgetresponse' ),
+								'label' => esc_html__( 'MAX', 'gravityformsgetresponse' ),
 								'value' => '360',
 							),
 						),
@@ -237,6 +250,24 @@ class GFGetResponse extends GFFeedAddOn {
 						'class'             => 'medium',
 						'dependency'        => array( 'field' => 'account_type', 'values' => array( '360' ) ),
 						'feedback_callback' => array( $this, 'initialize_api' ),
+					),
+					array(
+						'name'          => 'max_tld',
+						'label'         => esc_html__( 'MAX Endpoint', 'gravityformsgetresponse' ),
+						'type'          => 'radio',
+						'default_value' => '.com',
+						'horizontal'    => true,
+						'choices'       => array(
+							array(
+								'label' => esc_html__( 'Standard (.com)', 'gravityformsgetresponse' ),
+								'value' => '.com',
+							),
+							array(
+								'label' => esc_html__( 'Europe (.pl)', 'gravityformsgetresponse' ),
+								'value' => '.pl',
+							),
+						),
+						'dependency'    => array( 'field' => 'account_type', 'values' => array( '360' ) ),
 					),
 					array(
 						'type'     => 'save',
@@ -498,7 +529,7 @@ class GFGetResponse extends GFFeedAddOn {
 		}
 
 		// Get GetResponse custom fields.
-		$custom_fields = $this->api->get_custom_fields();
+		$custom_fields = $this->get_custom_fields();
 
 		// If custom fields could not be retrieved, return.
 		if ( is_wp_error( $custom_fields ) ) {
@@ -575,7 +606,7 @@ class GFGetResponse extends GFFeedAddOn {
 		}
 
 		// Get existing GetResponse custom fields.
-		$custom_fields = $this->api->get_custom_fields();
+		$custom_fields = $this->get_custom_fields();
 
 		// If custom fields could not be retrieved, return.
 		if ( is_wp_error( $custom_fields ) ) {
@@ -649,6 +680,8 @@ class GFGetResponse extends GFFeedAddOn {
 			$_gaddon_posted_settings[ $field['name'] ][ $i ]['custom_key'] = '';
 
 		}
+
+		GFCache::delete( $this->get_slug() . '_custom_fields_' . $this->get_custom_fields_limit() );
 
 		return $field_value;
 
@@ -797,15 +830,32 @@ class GFGetResponse extends GFFeedAddOn {
 		// Get contact.
 		$existing_contact = $this->get_contact_by_email( $contact['email'], $contact['campaign']['campaignId'] );
 
-		// If contact exists, updated it. Otherwise, create it.
 		if ( $existing_contact ) {
-
-			// Log the contact to be added.
 			$this->log_debug( __METHOD__ . '(): Found existing contact; updating name, email address, custom fields.' );
 
 			// Set contact ID, custom fields.
 			$contact['contactId']         = $existing_contact['contactId'];
 			$contact['customFieldValues'] = rgar( $existing_contact, 'customFieldValues' ) && is_array( $existing_contact['customFieldValues'] ) ? array_merge( $existing_contact['customFieldValues'], $contact['customFieldValues'] ) : $contact['customFieldValues'];
+		}
+
+		/**
+		 * Allows the contact properties to be overridden before they are sent to GetResponse.
+		 *
+		 * @since 1.4
+		 *
+		 * @param array      $contact          The contact properties.
+		 * @param bool|array $existing_contact False or the existing contact properties.
+		 * @param array      $feed             The feed currently being processed.
+		 * @param array      $entry            The entry currently being processed.
+		 * @param array      $form             The form currently being processed.
+		 */
+		$contact = gf_apply_filters( array(
+			'gform_getresponse_contact',
+			$form['id']
+		), $contact, $existing_contact, $feed, $entry, $form );
+
+		// If contact exists, updated it. Otherwise, create it.
+		if ( $existing_contact ) {
 
 			// Log the contact to be updated.
 			$this->log_debug( __METHOD__ . '(): Contact that will be updated => ' . print_r( $contact, true ) );
@@ -881,7 +931,7 @@ class GFGetResponse extends GFFeedAddOn {
 		}
 
 		// Get custom fields.
-		$custom_fields = $this->api->get_custom_fields();
+		$custom_fields = $this->get_custom_fields();
 
 		// If custom fields could not be retrieved, return values array.
 		if ( is_wp_error( $custom_fields ) ) {
@@ -927,12 +977,29 @@ class GFGetResponse extends GFFeedAddOn {
 			// Validate field value based on type.
 			switch ( $custom_field['type'] ) {
 
+				case 'multi_select':
+
+					$form_field = GFAPI::get_field( $form, $field_id );
+
+					if ( $form_field instanceof GF_Field_MultiSelect ) {
+						$field_value = $form_field->to_array( rgar( $entry, $field_id ) );
+					} elseif ( ! is_array( $field_value ) ) {
+						$field_value = array( $field_value );
+					}
+
+					// If choices are not in list of custom field values, skip.
+					if ( $invalid = array_diff( $field_value, $custom_field['values'] ) ) {
+						$this->log_error( __METHOD__ . '(): Excluding field "' . $custom_field['name'] . '" (' . $custom_field_id . ') from contact because choices (' . implode( ', ', $invalid ) . ') are invalid.' );
+						continue 2;
+					}
+
+					break;
+
 				case 'checkbox':
 				case 'country':
 				case 'currency':
 				case 'gender':
 				case 'radio':
-				case 'multi_select':
 				case 'single_select':
 
 					// If field value is not in list of custom field values, skip.
@@ -1014,7 +1081,7 @@ class GFGetResponse extends GFFeedAddOn {
 			// Add custom field to contact object.
 			$values[] = array(
 				'customFieldId' => $custom_field_id,
-				'value'         => array( $field_value ),
+				'value'         => is_array( $field_value ) ? $field_value : array( $field_value ),
 			);
 
 		}
@@ -1046,7 +1113,7 @@ class GFGetResponse extends GFFeedAddOn {
 		$settings = $this->get_plugin_settings();
 
 		// If the API key is empty, return null.
-		if ( rgblank( $settings['api_key'] ) ) {
+		if ( ! rgar( $settings, 'api_key' ) ) {
 			return null;
 		}
 
@@ -1059,7 +1126,7 @@ class GFGetResponse extends GFFeedAddOn {
 		$this->log_debug( __METHOD__ . '(): Validating API credentials.' );
 
 		// Setup a new GetResponse API object.
-		$getresponse = new GF_GetResponse_API( $settings['api_key'], rgar( $settings, 'domain' ) );
+		$getresponse = new GF_GetResponse_API( $settings['api_key'], rgar( $settings, 'domain' ), rgar( $settings, 'max_tld' ) );
 
 		// Attempt to get account details.
 		$accounts = $getresponse->get_accounts();
@@ -1133,7 +1200,51 @@ class GFGetResponse extends GFFeedAddOn {
 
 	}
 
+	/**
+	 * Gets the GetResponse custom fields.
+	 *
+	 * @since 1.5
+	 *
+	 * @return array|WP_Error
+	 */
+	public function get_custom_fields() {
+		$limit     = $this->get_custom_fields_limit();
+		$cache_key = $this->get_slug() . '_custom_fields_' . $limit;
 
+		$custom_fields = GFCache::get( $cache_key );
+
+		if ( ! empty( $custom_fields ) ) {
+			return $custom_fields;
+		}
+
+		$custom_fields = $this->api->get_custom_fields( $limit );
+
+		if ( is_wp_error( $custom_fields ) ) {
+			return $custom_fields;
+		}
+
+		GFCache::set( $cache_key, $custom_fields, true, HOUR_IN_SECONDS );
+
+		return $custom_fields;
+	}
+
+	/**
+	 * Gets the maximum number of custom fields which should be retrieved.
+	 *
+	 * @since 1.5
+	 *
+	 * @return int
+	 */
+	public function get_custom_fields_limit() {
+		/**
+		 * Allows the maximum number of custom fields which are retrieved to be overridden.
+		 *
+		 * @since 1.5
+		 *
+		 * @param int $limit The custom fields limit. Defaults to 100.
+		 */
+		return (int) apply_filters( 'gform_getresponse_limit_pre_get_custom_fields', 100 );
+	}
 
 
 
@@ -1171,7 +1282,7 @@ class GFGetResponse extends GFFeedAddOn {
 		}
 
 		// Get GetResponse custom fields.
-		$custom_fields = $this->api->get_custom_fields();
+		$custom_fields = $this->get_custom_fields();
 
 		// If custom fields could not be retrieved, abort upgrade process.
 		if ( is_wp_error( $custom_fields ) ) {
