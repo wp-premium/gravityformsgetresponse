@@ -50,14 +50,20 @@ class GF_GetResponse_API {
 	 * Initialize GetResponse API library.
 	 *
 	 * @since  1.3
+	 * @since  1.5 Added the tld param.
 	 *
-	 * @param string $api_key GetResponse API key.
-	 * @param string $domain  GetResponse account domain.
+	 * @param string      $api_key GetResponse API key.
+	 * @param null|string $domain  GetResponse account domain.
+	 * @param null|string $max_tld The TLD used by the MAX (360) endpoint.
 	 */
-	public function __construct( $api_key, $domain = null ) {
+	public function __construct( $api_key, $domain = null, $max_tld = null ) {
 
 		$this->api_key = $api_key;
 		$this->domain  = $domain;
+
+		if ( $max_tld && $max_tld !== '.com' ) {
+			$this->api_url_360 = str_replace( '.com', $max_tld, $this->api_url_360 );
+		}
 
 	}
 
@@ -191,12 +197,21 @@ class GF_GetResponse_API {
 	 * Get custom fields for account.
 	 *
 	 * @since  1.3
+	 * @since  1.5 Added the limit param.
+	 *
+	 * @param int $limit The maximum number of custom fields which should be retrieved. Defaults to 100.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function get_custom_fields() {
+	public function get_custom_fields( $limit = 100 ) {
 
-		return $this->make_request( 'custom-fields' );
+		$options = array();
+
+		if ( $limit !== 100 ) {
+			$options['perPage'] = $limit;
+		}
+
+		return $this->make_request( 'custom-fields', $options );
 
 	}
 
@@ -223,6 +238,7 @@ class GF_GetResponse_API {
 
 		// Prepare request URL.
 		$request_url = ( $this->domain ? $this->api_url_360 : $this->api_url ) . $action;
+		gf_getresponse()->log_debug( sprintf( '%s(): Sending request to the %s endpoint.', __METHOD__, $request_url ) );
 
 		// Add query parameters.
 		if ( 'GET' === $method ) {

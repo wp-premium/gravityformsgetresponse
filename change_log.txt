@@ -1,3 +1,16 @@
+### 1.5 | 2020-09-03
+- Added support for Gravity Forms 2.5.
+- Added the [gform_getresponse_limit_pre_get_custom_fields](https://docs.gravityforms.com/gform_getresponse_limit_pre_get_custom_fields/) filter allowing the maximum number of custom fields which are retrieved to be overridden.
+- Added support for MAX (360/Enterprise) accounts using the .pl endpoint.
+- Fixed an issue where values are not added to a multi_select type custom field when multiple choices are selected for the Multi Select field.
+
+
+### 1.4 | 2020-03-19
+- Added translations for Hebrew, Hindi, Japanese, and Turkish.
+- Added the [gform_getresponse_contact](https://docs.gravityforms.com/gform_getresponse_contact/) filter.
+- Fixed a PHP 7.4 notice which occur when the API is initializing and the settings are empty.
+
+
 ### 1.3 | 2020-01-22
 - Added support for GetResponse API version 3.
 - Added support for GetResponse Enterprise.
@@ -9,7 +22,7 @@
 - Added GPL to plugin header.
 - Updated Plugin URI and Author URI to use https.
 - Fixed strings for translations.
-	
+
 
 ### 1.1 | 2016-08-31
 - Added feed duplication support.

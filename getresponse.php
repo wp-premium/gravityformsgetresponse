@@ -2,11 +2,11 @@
 
 /*
 Plugin Name: Gravity Forms GetResponse Add-On
-Plugin URI: https://www.gravityforms.com
+Plugin URI: https://gravityforms.com
 Description: Integrates Gravity Forms with GetResponse, allowing form submissions to be automatically sent to your GetResponse account.
-Version: 1.3
-Author: rocketgenius
-Author URI: https://www.rocketgenius.com
+Version: 1.5
+Author: Gravity Forms
+Author URI: https://gravityforms.com
 License: GPL-2.0+
 Text Domain: gravityformsgetresponse
 Domain Path: /languages
@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 defined( 'ABSPATH' ) || die();
 
-define( 'GF_GETRESPONSE_VERSION', '1.3' );
+define( 'GF_GETRESPONSE_VERSION', '1.5' );
 
 // If Gravity Forms is loaded, bootstrap the GetResponse Add-On.
 add_action( 'gform_loaded', array( 'GF_GetResponse_Bootstrap', 'load' ), 5 );
